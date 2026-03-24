@@ -1,0 +1,5 @@
+*.log
+*.lock
+.env
+oci-arm-host-capacity/vendor/
+oci-arm-host-capacity/composer.lock

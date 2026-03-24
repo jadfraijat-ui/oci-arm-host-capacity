@@ -1,0 +1,11 @@
+{
+  "name": "t0005-app2",
+  "hostname": "t0005-app2",
+  "ocpus": 1,
+  "memory": 6,
+  "boot_size": 50,
+  "network": {
+    "dual_stack": false,
+    "assign_public_ip": false
+  }
+}
