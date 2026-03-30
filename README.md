@@ -87,6 +87,20 @@ The launcher defaults are now biased toward:
 - `VM.Standard.A1.Flex`
 - `75GB` boot volume with a `50GB` floor
 
+## Network target
+
+The intended default network posture for launched hosts is:
+- one public IPv4 assigned on launch
+- IPv6 enabled on launch
+- public dual-stack subnet placement by default
+
+The OCI launcher already requests the public IPv4 + initial IPv6 at launch time. The remaining network goal
+is to make the tenant bootstrap and post-launch tooling capable of driving a VNIC up to OCI's documented
+IPv6 object ceiling of 32 per VNIC when that is useful for the workload.
+
+This repo does **not** currently claim to create 32 IPv6 objects during instance launch. That remains tracked
+as follow-up work, separate from the base dual-stack launch behavior.
+
 ## Sync into AI Control Panel
 
 Once the standalone copy is working, sync the source-controlled runtime files into AI Control Panel:

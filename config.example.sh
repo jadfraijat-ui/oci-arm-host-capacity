@@ -24,9 +24,14 @@ INSTANCES_DIR="./instances"
 
 # The default launcher posture is:
 # - Ubuntu 24 ARM64 image mappings per tenant
-# - public IPv4 enabled
-# - dual-stack enabled
+# - one public IPv4 enabled on launch
+# - dual-stack enabled on launch
 # - 75GB boot disk default with 50GB floor
+#
+# Follow-up network bootstrap work should keep aiming for:
+# - one public IPv4 per launched VNIC
+# - IPv6-ready public subnets
+# - expansion toward OCI's 32 IPv6 object limit per VNIC where needed
 
 # ===========================================
 # RETRY TIMING (all values in seconds)

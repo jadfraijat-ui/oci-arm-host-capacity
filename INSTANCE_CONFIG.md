@@ -89,6 +89,13 @@ Create JSON files in the `instances/` directory. Each file defines one instance 
 
 If you omit `shape`, `image_id`, or `subnet_id`, the launcher uses the tenant defaults. The active defaults are meant to bias new launches toward Ubuntu 24 ARM64 on a public dual-stack node first, and only narrow down when you explicitly ask for it.
 
+In the current implementation, the launcher requests:
+- one public IPv4 on launch when `network.assign_public_ip` is `true`
+- one initial IPv6 on launch when `network.dual_stack` is `true`
+
+The larger IPv6 target for this project is to support post-launch expansion up to OCI's documented limit of
+32 IPv6 address objects per VNIC. That is a separate step from the base instance launch path.
+
 ## Adding Custom Tenants
 
 1. Create tenant config folder:
