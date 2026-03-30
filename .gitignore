@@ -1,10 +1,13 @@
 *.log
 *.lock
 .env
+config.sh
+public/
 oci-arm-host-capacity/vendor/
 oci-arm-host-capacity/composer.lock
 
 oci-arm-host-capacity-fixed/vendor/
+oci-arm-host-capacity-fixed/.env
 .retry-configs.txt
 .cycle_count
 .launch.lock

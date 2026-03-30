@@ -1,7 +1,8 @@
 # OCI Instance Launcher Configuration
 # ===========================================
-# Copy this file to config.sh and customize
-# The script will auto-load config.sh if it exists
+# Copy this file to config.sh and customize.
+# The launcher auto-loads config.sh when it exists.
+# Keep real config.sh local; do not commit it.
 
 # ===========================================
 # TENANTS - Add your OCI tenants
@@ -9,8 +10,10 @@
 # Space-separated list of tenant directory names
 TENANTS="maperryspeaks oci-phoenix-1-omeiyysa"
 
-# Directory containing tenant config folders
-# Each folder should have: config.config and key.pem
+# Directory containing tenant config folders.
+# Each tenant folder should have:
+#   - config.config
+#   - key.pem
 CONFIG_DIR="/path/to/your/oci-tenants"
 
 # ===========================================
@@ -18,6 +21,12 @@ CONFIG_DIR="/path/to/your/oci-tenants"
 # ===========================================
 # Directory containing instance JSON configs (default: ./instances)
 INSTANCES_DIR="./instances"
+
+# The default launcher posture is:
+# - Ubuntu 24 ARM64 image mappings per tenant
+# - public IPv4 enabled
+# - dual-stack enabled
+# - 75GB boot disk default with 50GB floor
 
 # ===========================================
 # RETRY TIMING (all values in seconds)
@@ -73,11 +82,7 @@ WEB_LOG="./public/retry.log"
 # Example - adding "my-new-tenant":
 # TENANTS="maperryspeaks oci-phoenix-1-omeiyysa my-new-tenant"
 #
-# Then add subnet/image mappings in launch-instances.sh:
-# get_subnet() {
-#     case "$1" in
-#         "maperryspeaks") echo "ocid1.subnet..." ;;
-#         "oci-phoenix-1-omeiyysa") echo "ocid1.subnet..." ;;
-#         "my-new-tenant") echo "ocid1.subnet..." ;;
-#     esac
-# }
+# Then add tenant mappings in launch-instances.sh:
+# - get_public_subnet()
+# - get_private_subnet()
+# - get_image()

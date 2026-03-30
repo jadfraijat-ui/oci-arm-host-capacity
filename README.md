@@ -1,6 +1,8 @@
 # OCI ARM Host Capacity Retry
 
 Automated Oracle Cloud Infrastructure instance launcher with smart retry logic for ARM instances.
+This repo is the source of truth for the retry tool. After the standalone copy is set up and verified,
+you sync the runtime code into `ai-control-panel` instead of editing the embedded copy first.
 
 ## Features
 
@@ -14,15 +16,37 @@ Automated Oracle Cloud Infrastructure instance launcher with smart retry logic f
 ## Quick Start
 
 ```bash
-# Edit instance configs
+# One-time standalone setup
+./scripts/setup-standalone.sh
+
+# Edit config + instance files
+vim config.sh
 vim instances/*.json
 
-# Run the launcher
+# Run the launcher from the standalone repo
 ./launch-instances.sh
 
 # View live dashboard
 open http://localhost:8080/live.html
 ```
+
+## What belongs in this repo
+
+- `launch-instances.sh` - main retry orchestration
+- `live.html` - live monitoring dashboard
+- `config.example.sh` - template for local runtime config
+- `INSTANCE_CONFIG.md` - instance manifest reference
+- `instances/*.example` - safe example manifests
+- `oci-arm-host-capacity-fixed/` - standalone OCI PHP helper
+- `scripts/setup-standalone.sh` - first-time local bootstrap
+- `scripts/sync-to-ai-control-panel.sh` - copy the clean runtime code back into AI Control Panel
+
+Do not commit:
+- `config.sh`
+- OCI tenant private keys or tenant `config.config` secrets
+- `.env` inside `oci-arm-host-capacity-fixed/`
+- `vendor/`
+- logs, locks, or runtime queue files
 
 ## Instance Configuration
 
@@ -49,6 +73,31 @@ Defaults are intentionally biased toward:
 - `public dual-stack` when you do not override the network block
 - `75GB` boot disk, with a floor of `50GB`
 
+## Standalone setup
+
+1. Run `./scripts/setup-standalone.sh`
+2. Edit `config.sh`
+3. Point `CONFIG_DIR` at the OCI tenant folders that already contain `config.config` and `key.pem`
+4. Create or edit `instances/*.json`
+5. Run `./launch-instances.sh`
+
+The launcher defaults are now biased toward:
+- public IPv4 + IPv6
+- Ubuntu 24 ARM64 tenant image mappings
+- `VM.Standard.A1.Flex`
+- `75GB` boot volume with a `50GB` floor
+
+## Sync into AI Control Panel
+
+Once the standalone copy is working, sync the source-controlled runtime files into AI Control Panel:
+
+```bash
+./scripts/sync-to-ai-control-panel.sh
+```
+
+That sync intentionally skips local-only files like `config.sh`, logs, OCI secrets, PHP helper `.env`,
+`vendor/`, and the live `instances/*.json` manifests.
+
 ## Options
 
 - `--instances-dir <dir>` - Custom instance configs directory
@@ -57,7 +106,7 @@ Defaults are intentionally biased toward:
 ## Architecture
 
 - `launch-instances.sh` - Main retry orchestration
-- `oci-arm-host-capacity/` - Forked OCI API client (with PHP 8.5 fixes)
+- `oci-arm-host-capacity-fixed/` - Forked OCI API client (with PHP 8.5 fixes)
 - `instances/` - Instance configuration files
 - `live.html` - Live monitoring dashboard
 
