@@ -1,0 +1,12 @@
+{
+  "name": "my-server-1",
+  "hostname": "my-server-1",
+  "shape": "VM.Standard.A1.Flex",
+  "ocpus": 3,
+  "memory": 18,
+  "boot_size": 75,
+  "network": {
+    "dual_stack": true,
+    "assign_public_ip": true
+  }
+}

@@ -37,6 +37,12 @@ $config = new OciConfig(
     (int) getenv('OCI_MEMORY_IN_GBS')
 );
 
+$availabilityDomainEnv = trim((string) getenv('OCI_AVAILABILITY_DOMAIN'));
+$configuredAvailabilityDomains = array_values(array_filter(array_map('trim', explode(',', $availabilityDomainEnv))));
+if ($configuredAvailabilityDomains !== []) {
+    $config->availabilityDomains = $configuredAvailabilityDomains;
+}
+
 $bootVolumeSizeInGBs = (string) getenv('OCI_BOOT_VOLUME_SIZE_IN_GBS');
 $bootVolumeId = (string) getenv('OCI_BOOT_VOLUME_ID');
 if ($bootVolumeSizeInGBs) {
@@ -71,19 +77,14 @@ if (getenv('CACHE_AVAILABILITY_DOMAINS')) {
 if (getenv('TOO_MANY_REQUESTS_TIME_WAIT')) {
     $api->setWaiter(new TooManyRequestsWaiter((int) getenv('TOO_MANY_REQUESTS_TIME_WAIT')));
 }
-$notifier = (function (): \Hitrov\Interfaces\NotifierInterface {
-    /*
-     * if you have own https://core.telegram.org/bots
-     * and set TELEGRAM_BOT_API_KEY and your TELEGRAM_USER_ID in .env
-     *
-     * then you can get notified when script will succeed.
-     * otherwise - don't mind OR develop you own NotifierInterface
-     * to e.g. send SMS or email.
-     */
-    return new \Hitrov\Notification\Telegram();
-})();
+$notifier = null;
 
-$shape = getenv('OCI_SHAPE');
+$shape = trim((string) getenv('OCI_SHAPE')) ?: 'VM.Standard.A1.Flex';
+$faultDomainEnv = trim((string) getenv('OCI_FAULT_DOMAIN'));
+$faultDomains = array_values(array_filter(array_map('trim', explode(',', $faultDomainEnv))));
+if ($faultDomains === []) {
+    $faultDomains = [null];
+}
 
 $maxRunningInstancesOfThatShape = 1;
 if (getenv('OCI_MAX_INSTANCES') !== false) {
@@ -110,35 +111,37 @@ if (!empty($config->availabilityDomains)) {
 
 foreach ($availabilityDomains as $availabilityDomainEntity) {
     $availabilityDomain = is_array($availabilityDomainEntity) ? $availabilityDomainEntity['name'] : $availabilityDomainEntity;
-    try {
-        $instanceDetails = $api->createInstance($config, $shape, getenv('OCI_SSH_PUBLIC_KEY'), $availabilityDomain);
-    } catch(ApiCallException $e) {
-        $message = $e->getMessage();
-        echo "$message\n";
+    foreach ($faultDomains as $faultDomain) {
+        try {
+            $instanceDetails = $api->createInstance($config, $shape, getenv('OCI_SSH_PUBLIC_KEY'), $availabilityDomain, $faultDomain);
+        } catch(ApiCallException $e) {
+            $message = $e->getMessage();
+            echo "$message\n";
 //            if ($notifier->isSupported()) {
 //                $notifier->notify($message);
 //            }
 
-        if (
-            $e->getCode() === 500 &&
-            strpos($message, 'InternalError') !== false &&
-            strpos($message, 'Out of host capacity') !== false
-        ) {
-            // trying next availability domain
-            sleep(16);
-            continue;
+            if (
+                $e->getCode() === 500 &&
+                strpos($message, 'InternalError') !== false &&
+                strpos($message, 'Out of host capacity') !== false
+            ) {
+                // trying next placement option
+                sleep(16);
+                continue;
+            }
+
+            // current config is broken
+            return;
         }
 
-        // current config is broken
+        // success
+        $message = json_encode($instanceDetails, JSON_PRETTY_PRINT);
+        echo "$message\n";
+        if ($notifier !== null && method_exists($notifier, 'isSupported') && $notifier->isSupported()) {
+            $notifier->notify($message);
+        }
+
         return;
     }
-
-    // success
-    $message = json_encode($instanceDetails, JSON_PRETTY_PRINT);
-    echo "$message\n";
-    if ($notifier->isSupported()) {
-        $notifier->notify($message);
-    }
-
-    return;
 }

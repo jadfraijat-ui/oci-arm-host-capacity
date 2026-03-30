@@ -32,15 +32,22 @@ Create JSON files in `instances/` directory:
 {
   "name": "my-server",
   "hostname": "my-server",
+  "shape": "VM.Standard.A1.Flex",
   "ocpus": 3,
   "memory": 18,
-  "boot_size": 150,
+  "boot_size": 75,
   "network": {
-    "dual_stack": false,
-    "assign_public_ip": false
+    "dual_stack": true,
+    "assign_public_ip": true
   }
 }
 ```
+
+Defaults are intentionally biased toward:
+- `Ubuntu 24 ARM64` image mappings per tenant
+- `VM.Standard.A1.Flex`
+- `public dual-stack` when you do not override the network block
+- `75GB` boot disk, with a floor of `50GB`
 
 ## Options
 

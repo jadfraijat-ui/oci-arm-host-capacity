@@ -40,7 +40,8 @@ class OciApi
         OciConfig $config,
         string $shape,
         string $sshKey,
-        string $availabilityDomain
+        string $availabilityDomain,
+        ?string $faultDomain = null
     ): array
     {
         if (isset($this->waiter) && $this->waiter->isConfigured()) {
@@ -61,8 +62,8 @@ class OciApi
             "assignPrivateDnsRecord" => true,
         ];
 
-        if ($config->ipv6Enabled && $config->ipv6SubnetId) {
-            $vnicDetails["ipv6AddressPoolIds"] = [$config->ipv6SubnetId];
+        if ($config->ipv6Enabled) {
+            $vnicDetails["assignIpv6Ip"] = true;
         }
 
         $body = [
@@ -99,7 +100,11 @@ class OciApi
             ]
         ];
 
-        if ($config->ipv6Enabled && $config->ipv6SubnetId) {
+        if ($faultDomain !== null && $faultDomain !== '') {
+            $body["faultDomain"] = $faultDomain;
+        }
+
+        if ($config->ipv6Enabled) {
             $body["freeformTags"]["ipv6_enabled"] = "true";
         }
 
