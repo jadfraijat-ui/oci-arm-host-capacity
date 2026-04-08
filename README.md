@@ -54,12 +54,12 @@ Create JSON files in `instances/` directory:
 
 ```json
 {
-  "name": "my-server",
-  "hostname": "my-server",
+  "name": "free-arm-core",
+  "hostname": "free-arm-core",
   "shape": "VM.Standard.A1.Flex",
-  "ocpus": 3,
-  "memory": 18,
-  "boot_size": 75,
+  "ocpus": 4,
+  "memory": 24,
+  "boot_size": 200,
   "network": {
     "dual_stack": true,
     "assign_public_ip": true
@@ -68,10 +68,10 @@ Create JSON files in `instances/` directory:
 ```
 
 Defaults are intentionally biased toward:
-- `Ubuntu 24 ARM64` image mappings per tenant
+- `Ubuntu 24 Minimal ARM64` image mappings per tenant
 - `VM.Standard.A1.Flex`
 - `public dual-stack` when you do not override the network block
-- `75GB` boot disk, with a floor of `50GB`
+- the full `4 OCPU / 24GB / 200GB` Always Free ARM box when the tenant is empty
 
 ## Standalone setup
 
@@ -83,9 +83,9 @@ Defaults are intentionally biased toward:
 
 The launcher defaults are now biased toward:
 - public IPv4 + IPv6
-- Ubuntu 24 ARM64 tenant image mappings
+- Ubuntu 24 Minimal ARM64 tenant image mappings
 - `VM.Standard.A1.Flex`
-- `75GB` boot volume with a `50GB` floor
+- `200GB` boot volume with a `50GB` floor
 
 ## Network target
 

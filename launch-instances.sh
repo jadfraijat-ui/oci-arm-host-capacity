@@ -36,7 +36,7 @@ RATE_LIMIT_PAUSE="${RATE_LIMIT_PAUSE:-30}"
 RATE_LIMIT_JITTER_MIN="${RATE_LIMIT_JITTER_MIN:-5}"
 RATE_LIMIT_JITTER_MAX="${RATE_LIMIT_JITTER_MAX:-20}"
 DEFAULT_SHAPE="${DEFAULT_SHAPE:-VM.Standard.A1.Flex}"
-DEFAULT_BOOT_SIZE_GB="${DEFAULT_BOOT_SIZE_GB:-75}"
+DEFAULT_BOOT_SIZE_GB="${DEFAULT_BOOT_SIZE_GB:-200}"
 MIN_BOOT_SIZE_GB="${MIN_BOOT_SIZE_GB:-50}"
 DEFAULT_ASSIGN_PUBLIC_IP="${DEFAULT_ASSIGN_PUBLIC_IP:-true}"
 DEFAULT_DUAL_STACK="${DEFAULT_DUAL_STACK:-true}"
@@ -67,11 +67,17 @@ get_private_subnet() {
     esac
 }
 
+get_subnet_ipv6() {
+    case "$1" in
+        *) echo "" ;;
+    esac
+}
+
 get_image() {
     case "$1" in
-        "maperryspeaks") echo "ocid1.image.oc1.us-chicago-1.aaaaaaaaoo4nzxuu6w5aty4ap6jjnfxebwwxhlfxj5gkzmtgtnsw24eksmia" ;;
-        "oci-phoenix-1-omeiyysa") echo "ocid1.image.oc1.phx.aaaaaaaavfbkczxpy4zopkqswucpfx7tv7x5xyjvppsp4l5tjkwv5kctr3dq" ;;
-        "oci-sanjose-1-zeqic64q") echo "ocid1.image.oc1.us-sanjose-1.aaaaaaaa3bhtihetcgdkvl2srbvm23l5guf5wlmtq3toyht2l6kcuxqa2adq" ;;
+        "maperryspeaks") echo "ocid1.image.oc1.us-chicago-1.aaaaaaaahx57wqrsua2bw4oe63vnsvdc7pgx3yllpolzr2psvcq6qwg26yja" ;;
+        "oci-phoenix-1-omeiyysa") echo "ocid1.image.oc1.phx.aaaaaaaavgzv3uxxskrwd6tmm2jfmkzqx25aq2inzcx7bs5op23ft35qgyfq" ;;
+        "oci-sanjose-1-zeqic64q") echo "ocid1.image.oc1.us-sanjose-1.aaaaaaaagg6cb3x6qxcoerzncv7zyrhpnwnijp7wuuot6uxrsiiwvzfhaqfq" ;;
         *) echo "" ;;
     esac
 }
@@ -168,12 +174,14 @@ get_oci_env() {
     local user=$(grep "^user=" "$config" | cut -d'=' -f2)
     local fingerprint=$(grep "^fingerprint=" "$config" | cut -d'=' -f2)
     local tenancy=$(grep "^tenancy=" "$config" | cut -d'=' -f2)
-    local key_file=$(grep "^key_file=" "$config" | cut -d'=' -f2)
+    local key_file="$CONFIG_DIR/$tenant/key.pem"
     local ssh_key=$(get_ssh_key "$tenant")
     
     local ipv6_enabled="false"
     if [ "$dual_stack" = "true" ]; then
-        ipv6_enabled="true"
+        local ipv6_subnet=""
+        ipv6_subnet=$(get_subnet_ipv6 "$tenant")
+        [ -n "$ipv6_subnet" ] && ipv6_enabled="true"
     fi
     
     cat > "$SCRIPT_DIR/oci-arm-host-capacity-fixed/.env" << ENVEOF
@@ -255,6 +263,15 @@ launch_instance() {
         return 2
     }
     
+    local ipv6_subnet=""
+    if [ "$dual_stack" = "true" ]; then
+        ipv6_subnet=$(get_subnet_ipv6 "$tenant")
+        if [ -z "$ipv6_subnet" ]; then
+            log "NOTE: $tenant has no IPv6 subnet configured; launching IPv4-only for now"
+            dual_stack="false"
+        fi
+    fi
+
     local net_info=""
     [ "$assign_public_ip" = "true" ] && net_info="${net_info}public_ip+"
     [ "$dual_stack" = "true" ] && net_info="${net_info}dual_stack"
@@ -266,16 +283,31 @@ launch_instance() {
     
     get_oci_env "$tenant" "$shape" "$image_id" "$subnet_id" "$ocpus" "$memory" "$boot_size" "$hostname" "$assign_public_ip" "$dual_stack" "$availability_domains" "$fault_domains"
     
-    local output=$(php "$SCRIPT_DIR/oci-arm-host-capacity-fixed/index.php" 2>/dev/null)
+    local output
+    output=$(php "$SCRIPT_DIR/oci-arm-host-capacity-fixed/index.php" 2>&1)
+    local status=$?
     echo "$output" >> "$LOG_DIR/launch-$tenant.log"
     echo "$output"
+
+    if [ $status -ne 0 ]; then
+        local detail
+        detail=$(printf '%s\n' "$output" | awk 'NF { print; exit }')
+        [ -n "$detail" ] && log "FAILED DETAIL: $tenant - $detail"
+    fi
     
     check_rate_limit "$output" && {
         echo "RATELIMIT" > /tmp/oracle-retry-ratelimit
         return 3
     }
-    
-    check_success "$output" && return 0 || return 1
+
+    if check_success "$output"; then
+        return 0
+    fi
+
+    local detail
+    detail=$(printf '%s\n' "$output" | awk 'NF { print; exit }')
+    [ -n "$detail" ] && log "FAILED DETAIL: $tenant - $detail"
+    return 1
 }
 
 load_instances_clean() {
@@ -377,7 +409,9 @@ main() {
         [ "$launched" = false ] && random_delay "$INSTANCE_DELAY_MIN" "$INSTANCE_DELAY_MAX"
     done < "$CONFIGS_FILE"
     
-    local cycle_end=$(date +%s) cycle_duration=$((cycle_end - cycle_start))
+    local cycle_end
+    cycle_end=$(date +%s)
+    local cycle_duration=$((cycle_end - cycle_start))
     log "=== Cycle Complete: $success_count success, $fail_count failed, $rate_limit_count rate limited, took ${cycle_duration}s ==="
     
     release_lock

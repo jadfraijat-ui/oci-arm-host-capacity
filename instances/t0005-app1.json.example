@@ -1,10 +1,10 @@
 {
-  "name": "t0005-app1",
-  "hostname": "t0005-app1",
+  "name": "free-arm-core",
+  "hostname": "free-arm-core",
   "shape": "VM.Standard.A1.Flex",
-  "ocpus": 3,
-  "memory": 18,
-  "boot_size": 75,
+  "ocpus": 4,
+  "memory": 24,
+  "boot_size": 200,
   "network": {
     "dual_stack": true,
     "assign_public_ip": true,

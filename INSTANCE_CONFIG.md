@@ -4,15 +4,15 @@ Create JSON files in the `instances/` directory. Each file defines one instance 
 
 ## Example Configurations
 
-### Basic 3 OCPU Server (Private Network)
+### Full Always Free ARM Box
 ```json
 {
-  "name": "app-server",
-  "hostname": "app-server",
+  "name": "free-arm-core",
+  "hostname": "free-arm-core",
   "shape": "VM.Standard.A1.Flex",
-  "ocpus": 3,
-  "memory": 18,
-  "boot_size": 75,
+  "ocpus": 4,
+  "memory": 24,
+  "boot_size": 200,
   "network": {
     "dual_stack": true,
     "assign_public_ip": true
@@ -78,7 +78,7 @@ Create JSON files in the `instances/` directory. Each file defines one instance 
 | `shape` | No | OCI shape (default: `VM.Standard.A1.Flex`) |
 | `ocpus` | Yes | Number of OCPUs (ARM cores) |
 | `memory` | Yes | Memory in GB |
-| `boot_size` | No | Boot volume size in GB (default: `75`, floor: `50`) |
+| `boot_size` | No | Boot volume size in GB (default: `200`, floor: `50`) |
 | `network.dual_stack` | No | Enable IPv4+IPv6 (default: `true`) |
 | `network.assign_public_ip` | No | Assign public IP (default: `true`) |
 | `network.ipv6_subnet_id` | No | IPv6 subnet OCID (if using dual_stack) |
@@ -87,7 +87,7 @@ Create JSON files in the `instances/` directory. Each file defines one instance 
 | `availability_domains` | No | One AD or a list of ADs to try in order |
 | `fault_domains` | No | One FD or a list of FDs to try in order |
 
-If you omit `shape`, `image_id`, or `subnet_id`, the launcher uses the tenant defaults. The active defaults are meant to bias new launches toward Ubuntu 24 ARM64 on a public dual-stack node first, and only narrow down when you explicitly ask for it.
+If you omit `shape`, `image_id`, or `subnet_id`, the launcher uses the tenant defaults. The active defaults are meant to bias empty tenancies toward the full Ubuntu 24 Minimal ARM64 public dual-stack box first: `4 OCPU / 24GB / 200GB`.
 
 In the current implementation, the launcher requests:
 - one public IPv4 on launch when `network.assign_public_ip` is `true`

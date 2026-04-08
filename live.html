@@ -106,14 +106,14 @@
                 <button class="tab" onclick="showTab('keys')">Add Tenant</button>
             </div>
             <div id="tab-json" class="tab-content active">
-                <p style="color:#94a3b8; margin-bottom:10px;">Paste JSON config for a new instance. Defaults target Ubuntu 24 ARM64 on a public dual-stack node with a 75GB boot disk.</p>
+                <p style="color:#94a3b8; margin-bottom:10px;">Paste JSON config for a new instance. Defaults target Ubuntu 24 Minimal ARM64 on the full OCI Always Free box.</p>
                 <textarea id="json-input" placeholder='{
-  "name": "my-app",
-  "hostname": "my-app",
+  "name": "free-arm-core",
+  "hostname": "free-arm-core",
   "shape": "VM.Standard.A1.Flex",
   "ocpus": 4,
   "memory": 24,
-  "boot_size": 75,
+  "boot_size": 200,
   "network": {
     "dual_stack": true,
     "assign_public_ip": true
@@ -202,7 +202,7 @@
             try {
                 const config = JSON.parse(input);
                 config.shape = String(config.shape || 'VM.Standard.A1.Flex').trim() || 'VM.Standard.A1.Flex';
-                config.boot_size = Math.max(50, Number(config.boot_size || 75) || 75);
+                config.boot_size = Math.max(50, Number(config.boot_size || 200) || 200);
                 config.network = typeof config.network === 'object' && config.network !== null ? config.network : {};
                 if (typeof config.network.assign_public_ip !== 'boolean') {
                     config.network.assign_public_ip = true;
