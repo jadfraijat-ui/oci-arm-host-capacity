@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-TARGET_DIR="${1:-/opt/aiether/ai-control-panel/scripts/oracle-retry}"
+TARGET_DIR="${1:-/opt/aietherpanel/oracle-retry}"
 
 mkdir -p "$TARGET_DIR"
 

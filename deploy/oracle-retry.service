@@ -1,0 +1,18 @@
+[Unit]
+Description=OCI ARM host capacity retry runner
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mmurphy
+Group=www-data
+WorkingDirectory=/opt/aietherpanel/oracle-retry
+Environment=HOME=/home/mmurphy
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/aietherpanel/oracle-retry/launch-instances.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

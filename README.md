@@ -4,6 +4,8 @@ Automated Oracle Cloud Infrastructure instance launcher with smart retry logic f
 This repo is the source of truth for the retry tool. After the standalone copy is set up and verified,
 you sync the runtime code into `ai-control-panel` instead of editing the embedded copy first.
 
+Current release: `1.2.0`
+
 ## Features
 
 - **Directory-based configuration** - Drop JSON files into `instances/` to add instances
@@ -27,13 +29,18 @@ vim instances/*.json
 ./launch-instances.sh
 
 # View live dashboard
-open http://localhost:8080/live.html
+open http://localhost:8080/
 ```
 
 ## What belongs in this repo
 
 - `launch-instances.sh` - main retry orchestration
 - `live.html` - live monitoring dashboard
+- `index.html` - stable root entry that opens the live dashboard
+- `dashboard.html` - full log view
+- `upload-tenant.php` - tenant profile/key upload endpoint used by the live panel
+- `remove-instance.php` - archive/remove endpoint for queued instances
+- `deploy/` - service and publish helpers for the live retry panel
 - `config.example.sh` - template for local runtime config
 - `INSTANCE_CONFIG.md` - instance manifest reference
 - `instances/*.example` - safe example manifests
@@ -108,6 +115,8 @@ Once the standalone copy is working, sync the source-controlled runtime files in
 ```bash
 ./scripts/sync-to-ai-control-panel.sh
 ```
+
+That sync now targets `/opt/aietherpanel/oracle-retry` by default so the live Ryzen runtime and this repo stay aligned.
 
 That sync intentionally skips local-only files like `config.sh`, logs, OCI secrets, PHP helper `.env`,
 `vendor/`, and the live `instances/*.json` manifests.
