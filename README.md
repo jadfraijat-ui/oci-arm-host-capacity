@@ -4,7 +4,7 @@ Automated Oracle Cloud Infrastructure instance launcher with smart retry logic f
 This repo is the source of truth for the retry tool. After the standalone copy is set up and verified,
 you sync the runtime code into `ai-control-panel` instead of editing the embedded copy first.
 
-Current release: `1.2.0`
+Current release: `1.2.1`
 
 ## Features
 

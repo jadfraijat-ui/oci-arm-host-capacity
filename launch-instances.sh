@@ -317,6 +317,7 @@ load_instances_clean() {
     
     for file in "$dir"/*.json; do
         [ -f "$file" ] || continue
+        [[ "$(basename "$file")" == example-* ]] && continue
         
         local name hostname ocpus memory boot_size dual_stack assign_public_ip
         local shape image_id subnet_id availability_domains fault_domains
@@ -349,7 +350,7 @@ load_instances_clean() {
         [ -z "$name" ] || [ -z "$ocpus" ] || [ -z "$memory" ] || [ -z "$boot_size" ] && continue
         [ -z "$hostname" ] && hostname="$name"
 
-        instances+=("${name}\t${ocpus}\t${memory}\t${boot_size}\t${hostname}\t${assign_public_ip}\t${dual_stack}\t${shape}\t${image_id}\t${subnet_id}\t${availability_domains}\t${fault_domains}")
+        instances+=("${name}"$'\t'"${ocpus}"$'\t'"${memory}"$'\t'"${boot_size}"$'\t'"${hostname}"$'\t'"${assign_public_ip}"$'\t'"${dual_stack}"$'\t'"${shape}"$'\t'"${image_id}"$'\t'"${subnet_id}"$'\t'"${availability_domains}"$'\t'"${fault_domains}")
     done
     
     [ ${#instances[@]} -eq 0 ] && { echo "ERROR: No configs found" >&2; exit 1; }
