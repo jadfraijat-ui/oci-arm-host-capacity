@@ -19,10 +19,11 @@ LOCK_FILE="${LOCK_FILE:-$SCRIPT_DIR/.launch.lock}"
 CONFIGS_FILE="${CONFIGS_FILE:-$SCRIPT_DIR/.retry-configs.txt}"
 WEB_CONFIGS_FILE="${WEB_CONFIGS_FILE:-$INSTANCES_DIR/.configs.txt}"
 CYCLE_COUNT_FILE="${CYCLE_COUNT_FILE:-$SCRIPT_DIR/.cycle_count}"
+TENANT_META_FILE="${TENANT_META_FILE:-$SCRIPT_DIR/public/tenant-meta.json}"
 
 # Retry settings
 BASE_SLEEP="${BASE_SLEEP:-180}"
-MIN_SLEEP="${MIN_SLEEP:-30}"
+MIN_SLEEP="${MIN_SLEEP:-45}"
 SPEED_UP="${SPEED_UP:-15}"
 JITTER_MIN="${JITTER_MIN:--20}"
 JITTER_MAX="${JITTER_MAX:-20}"
@@ -228,6 +229,26 @@ check_success() {
     return 1
 }
 
+get_tenant_state() {
+    local tenant=$1
+    [ -f "$TENANT_META_FILE" ] || { echo "active"; return; }
+    jq -r --arg tenant "$tenant" '.[$tenant].state // "active"' "$TENANT_META_FILE" 2>/dev/null
+}
+
+should_skip_tenant() {
+    local tenant=$1 state
+    state=$(get_tenant_state "$tenant")
+    case "$state" in
+        deployed|paused|support)
+            log "SKIP: $tenant is marked $state"
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 random_delay() {
     local min=${1:-1} max=${2:-10}
     local delay=$((RANDOM % (max - min + 1) + min))
@@ -391,6 +412,7 @@ main() {
         
         local launched=false
         for tenant in $TENANTS; do
+            should_skip_tenant "$tenant" && continue
             log "Trying $tenant for $name..."
             
             local result
