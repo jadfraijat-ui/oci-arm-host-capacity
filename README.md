@@ -132,6 +132,8 @@ That sync intentionally skips local-only files like `config.sh`, logs, OCI secre
 - `oci-arm-host-capacity-fixed/` - Forked OCI API client (with PHP 8.5 fixes)
 - `instances/` - Instance configuration files
 - `live.html` - Live monitoring dashboard
+- `upload-tenant.php` - internal tenant upload endpoint used by the live dashboard Add Tenant tab
+- `deploy/oracle-retry-normalize-tenant` - root-owned helper that normalizes uploaded tenant key ownership for the Ubuntu service runner
 
 ## License
 

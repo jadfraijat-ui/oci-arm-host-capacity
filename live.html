@@ -125,12 +125,20 @@
                 <button class="btn-secondary" onclick="document.getElementById('add-modal').style.display='none'">Cancel</button>
             </div>
             <div id="tab-keys" class="tab-content">
-                <p style="color:#94a3b8; margin-bottom:10px;">Add tenant config directory path:</p>
-                <input type="text" id="tenant-path" placeholder="/Users/you/data/oci-tenants/new-tenant">
-                <p style="color:#94a3b8; margin:10px 0;">Or drag & drop key.pem + config.config files:</p>
-                <input type="file" id="key-file" accept=".pem" placeholder="key.pem">
-                <input type="file" id="config-file" accept=".config" placeholder="config.config">
-                <input type="text" id="tenant-name" placeholder="Tenant name (e.g. my-tenant)">
+                <p style="color:#94a3b8; margin-bottom:10px;">Paste the OCI config preview and attach the downloaded PEM files. The server rewrites <code>key_file</code> automatically.</p>
+                <input type="text" id="tenant-name" placeholder="Tenant profile name, like barbie68r">
+                <input type="text" id="tenant-display-name" placeholder="Display name (optional)">
+                <textarea id="oci-config-input" placeholder="[DEFAULT]
+user=ocid1.user.oc1..
+fingerprint=00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00
+tenancy=ocid1.tenancy.oc1..
+region=us-phoenix-1
+key_file=<path to your private keyfile>"></textarea>
+                <p style="color:#94a3b8; margin:10px 0;">Private key PEM from OCI:</p>
+                <input type="file" id="key-file" accept=".pem">
+                <p style="color:#94a3b8; margin:10px 0;">Public key PEM from OCI, optional but useful for notes:</p>
+                <input type="file" id="public-key-file" accept=".pem">
+                <p style="color:#64748b; font-size:12px; margin-bottom:10px;">Old folder-path workflow is gone. This panel stores the tenant under the retry service config directory.</p>
                 <div id="tenant-msg" class="success-msg"></div>
                 <button class="btn-primary" onclick="addTenant()">Add Tenant</button>
                 <button class="btn-secondary" onclick="document.getElementById('add-modal').style.display='none'">Cancel</button>
@@ -180,7 +188,7 @@
         </div>
         
         <div class="time">Auto-refreshes every 5 seconds</div>
-        <div class="version">Version 1.2.1</div>
+        <div class="version">Version 1.3.0</div>
     </div>
     
     <footer>
@@ -230,18 +238,62 @@
         }
         
         function addTenant() {
-            const path = document.getElementById('tenant-path').value.trim();
             const name = document.getElementById('tenant-name').value.trim();
+            const displayName = document.getElementById('tenant-display-name').value.trim();
+            const configText = document.getElementById('oci-config-input').value.trim();
+            const privateKey = document.getElementById('key-file').files[0];
+            const publicKey = document.getElementById('public-key-file').files[0];
             const msg = document.getElementById('tenant-msg');
-            if (!path) {
-                msg.textContent = 'Please enter a tenant path';
+
+            if (!name) {
+                msg.textContent = 'Please enter a tenant profile name';
                 msg.style.display = 'block';
                 msg.style.background = '#f87171';
                 return;
             }
-            msg.textContent = 'Tenant path saved. Edit launch-instances.sh to add: ' + name;
+
+            if (!configText) {
+                msg.textContent = 'Paste the OCI [DEFAULT] config block first';
+                msg.style.display = 'block';
+                msg.style.background = '#f87171';
+                return;
+            }
+
+            if (!privateKey) {
+                msg.textContent = 'Attach the downloaded private PEM key';
+                msg.style.display = 'block';
+                msg.style.background = '#f87171';
+                return;
+            }
+
+            const form = new FormData();
+            form.append('tenant_name', name);
+            form.append('display_name', displayName);
+            form.append('oci_config', configText);
+            form.append('private_key', privateKey);
+            if (publicKey) {
+                form.append('public_key', publicKey);
+            }
+
+            msg.textContent = 'Saving tenant...';
             msg.style.display = 'block';
-            msg.style.background = '#4ade80';
+            msg.style.background = '#fbbf24';
+
+            fetch('upload-tenant.php', { method: 'POST', body: form })
+                .then(async response => {
+                    const payload = await response.json().catch(() => null);
+                    if (!response.ok || !payload || !payload.ok) {
+                        throw new Error(payload?.message || 'Tenant save failed');
+                    }
+
+                    msg.textContent = payload.message + (payload.config_updated ? ' Added to retry list.' : ' Saved files; retry list needs manual update.');
+                    msg.style.background = '#4ade80';
+                    load();
+                })
+                .catch(error => {
+                    msg.textContent = 'Error: ' + error.message;
+                    msg.style.background = '#f87171';
+                });
         }
         
         function deleteInstance(name) {

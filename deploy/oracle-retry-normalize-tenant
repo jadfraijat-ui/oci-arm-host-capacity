@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+tenant_root="${1:-}"
+case "$tenant_root" in
+  /home/mmurphy/.oci/tenants/*) ;;
+  *)
+    echo "Refusing tenant path outside /home/mmurphy/.oci/tenants" >&2
+    exit 64
+    ;;
+esac
+
+if [ ! -d "$tenant_root" ]; then
+  echo "Tenant directory does not exist: $tenant_root" >&2
+  exit 66
+fi
+
+chown -R mmurphy:www-data "$tenant_root"
+find "$tenant_root" -type d -exec chmod 2770 {} +
+[ ! -f "$tenant_root/key.pem" ] || chmod 0600 "$tenant_root/key.pem"
+[ ! -f "$tenant_root/config.config" ] || chmod 0600 "$tenant_root/config.config"
+[ ! -f "$tenant_root/public-key.pem" ] || chmod 0644 "$tenant_root/public-key.pem"
