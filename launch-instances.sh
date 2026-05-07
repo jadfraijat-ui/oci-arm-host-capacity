@@ -53,6 +53,7 @@ get_public_subnet() {
         "oci-phoenix-1-omeiyysa") echo "ocid1.subnet.oc1.phx.aaaaaaaae36l65mttizeudw2rf3olrasquciix2inplxlw6i6tsic5vav52a" ;;
         "oci-sanjose-1-zeqic64q") echo "ocid1.subnet.oc1.us-sanjose-1.aaaaaaaatks6fap5obmn5ndfcjm7k46hg72jplnpcbb6rwwnszmfsaaljbga" ;;
         "rick74") echo "ocid1.subnet.oc1.iad.aaaaaaaa2t4zoiutvulc6lgdo56tnhp5topbu354ld4bmh26xw4wxoctcj5q" ;;
+        "barbie68r") echo "ocid1.subnet.oc1.ca-toronto-1.aaaaaaaay6s43xoreyh3s472ylodumvemq5vb2zw24ew4hgsjhtzh5q6lnuq" ;;
         *) echo "" ;;
     esac
 }
@@ -69,6 +70,7 @@ get_private_subnet() {
 
 get_subnet_ipv6() {
     case "$1" in
+        "barbie68r") echo "2603:c021:8:c400::/64" ;;
         *) echo "" ;;
     esac
 }
@@ -78,6 +80,7 @@ get_image() {
         "maperryspeaks") echo "ocid1.image.oc1.us-chicago-1.aaaaaaaahx57wqrsua2bw4oe63vnsvdc7pgx3yllpolzr2psvcq6qwg26yja" ;;
         "oci-phoenix-1-omeiyysa") echo "ocid1.image.oc1.phx.aaaaaaaavgzv3uxxskrwd6tmm2jfmkzqx25aq2inzcx7bs5op23ft35qgyfq" ;;
         "oci-sanjose-1-zeqic64q") echo "ocid1.image.oc1.us-sanjose-1.aaaaaaaagg6cb3x6qxcoerzncv7zyrhpnwnijp7wuuot6uxrsiiwvzfhaqfq" ;;
+        "barbie68r") echo "ocid1.image.oc1.ca-toronto-1.aaaaaaaaftaneg3mxtzg7alr5jbqyanvdsijmmdynhlm272h4bri5woy3kdq" ;;
         *) echo "" ;;
     esac
 }
@@ -201,6 +204,10 @@ OCI_HOSTNAME=$hostname
 OCI_ASSIGN_PUBLIC_IP=$assign_public_ip
 OCI_IPV6_ENABLED=$ipv6_enabled
 ENVEOF
+
+    if [ "$ipv6_enabled" = "true" ] && [ -n "$ipv6_subnet" ]; then
+        printf 'OCI_IPV6_SUBNET_ID=%s\n' "$ipv6_subnet" >> "$SCRIPT_DIR/oci-arm-host-capacity-fixed/.env"
+    fi
 
     if [ -n "$availability_domains" ]; then
         printf 'OCI_AVAILABILITY_DOMAIN=%s\n' "$availability_domains" >> "$SCRIPT_DIR/oci-arm-host-capacity-fixed/.env"

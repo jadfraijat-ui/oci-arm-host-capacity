@@ -105,7 +105,7 @@ class OciApi
         }
 
         if ($config->ipv6Enabled) {
-            $body["freeformTags"]["ipv6_enabled"] = "true";
+            $body["freeformTags"] = ["ipv6_enabled" => "true"];
         }
 
         $bodyJson = json_encode($body, JSON_UNESCAPED_SLASHES);
@@ -258,7 +258,7 @@ class OciApi
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_MAXREDIRS => 1,
-            CURLOPT_TIMEOUT => 10,
+            CURLOPT_TIMEOUT => (int) (getenv('OCI_API_TIMEOUT') ?: 45),
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => $method,
