@@ -1,4 +1,4 @@
-name: Oracle ARM Hunter
+name: Oracle ARM Sniper
 
 on:
   schedule:
@@ -6,40 +6,74 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-script:
+  run-sniper:
     runs-on: ubuntu-latest
     timeout-minutes: 210 
 
     steps:
-      - name: Checkout Matthew's Code
-        uses: actions/checkout@v3
-        with:
-          repository: 'matthewxmurphy/oci-arm-host-capacity'
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.1'
-
-      - name: Create .env and Key files
+      - name: Setup Oracle CLI & Auth
         run: |
-          echo "${{ secrets.OCI_PRIVATE_KEY }}" > oci_api_key.pem
-          chmod 600 oci_api_key.pem
+          # تجهيز بيئة أوراكل والمفاتيح
+          mkdir -p ~/.oci
+          echo "${{ secrets.OCI_PRIVATE_KEY }}" > ~/.oci/key.pem
+          chmod 600 ~/.oci/key.pem
           
-          cat <<EOF > .env
-          OCI_REGION=${{ secrets.OCI_REGION }}
-          OCI_USER_ID=${{ secrets.OCI_USER_ID }}
-          OCI_TENANCY_ID=${{ secrets.OCI_TENANCY_ID }}
-          OCI_KEY_FINGERPRINT=${{ secrets.OCI_KEY_FINGERPRINT }}
-          OCI_PRIVATE_KEY_FILENAME=oci_api_key.pem
-          OCI_SUBNET_ID=${{ secrets.OCI_SUBNET_ID }}
-          OCI_OCPUS=2
-          OCI_MEMORY_IN_GBS=12
-          OCI_BOOT_VOLUME_SIZE_IN_GBS=100
-          OCI_SHAPE=VM.Standard.A1.Flex
-          OCI_MAX_INSTANCES=1
+          cat <<EOF > ~/.oci/config
+          [DEFAULT]
+          user=${{ secrets.OCI_USER_ID }}
+          fingerprint=${{ secrets.OCI_KEY_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY_ID }}
+          region=${{ secrets.OCI_REGION }}
+          key_file=/home/runner/.oci/key.pem
           EOF
+          
+          echo "Installing official OCI CLI..."
+          bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)" -- --accept-all-defaults
+          echo "/home/runner/bin" >> $GITHUB_PATH
 
-      - name: Run Script
+      - name: The Sniper Loop
         run: |
-          php index.php
+          export PATH=/home/runner/bin:$PATH
+          
+          echo "1. Fetching Availability Domain..."
+          AD=$(oci iam availability-domain list --compartment-id "${{ secrets.OCI_TENANCY_ID }}" --query 'data[0].name' --raw-output)
+          
+          echo "2. Fetching Ubuntu 22.04 ARM Image ID..."
+          IMAGE_ID=$(oci compute image list --all --operating-system "Canonical Ubuntu" --operating-system-version "22.04" --shape "VM.Standard.A1.Flex" --compartment-id "${{ secrets.OCI_TENANCY_ID }}" --query 'data[0].id' --raw-output)
+          
+          if [ -z "$IMAGE_ID" ] || [ "$IMAGE_ID" == "null" ]; then
+            echo "Error: Could not fetch Image ID. Check your Tenancy ID."
+            exit 1
+          fi
+
+          echo "3. Starting Sniper Loop (Trying every 60 seconds)..."
+          while true; do
+            echo "[$(date)] Attempting to hijack a server..."
+            
+            # أمر إنشاء السيرفر
+            oci compute instance launch \
+              --availability-domain "$AD" \
+              --compartment-id "${{ secrets.OCI_TENANCY_ID }}" \
+              --shape "VM.Standard.A1.Flex" \
+              --subnet-id "${{ secrets.OCI_SUBNET_ID }}" \
+              --image-id "$IMAGE_ID" \
+              --shape-config '{"ocpus": 2, "memoryInGBs": 12}' \
+              --boot-volume-size-in-gbs 100 \
+              --display-name "Minecraft-Server" > response.json 2>&1 || true
+
+            # قراءة النتيجة
+            if grep -q "Out of host capacity" response.json; then
+              echo "[-] Out of capacity. Waiting 60 seconds..."
+            elif grep -q "TooManyRequests" response.json; then
+              echo "[-] Too many requests (Rate limit). Waiting 120 seconds..."
+              sleep 60
+            elif grep -q "id" response.json && grep -q "PROVISIONING" response.json; then
+              echo "[+] SUCCESS! SERVER IS BEING PROVISIONED! GO CHECK ORACLE!"
+              cat response.json
+              break
+            else
+              echo "[!] Unhandled response. Continuing to loop just in case..."
+            fi
+            
+            sleep 60
+          done
