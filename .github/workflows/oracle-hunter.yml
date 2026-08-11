@@ -17,6 +17,9 @@ jobs:
           echo "${{ secrets.OCI_PRIVATE_KEY }}" > ~/.oci/key.pem
           chmod 600 ~/.oci/key.pem
           
+          # إخفاء تحذيرات الصلاحيات
+          echo "OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True" >> $GITHUB_ENV
+          
           cat <<EOF > ~/.oci/config
           [DEFAULT]
           user=${{ secrets.OCI_USER_ID }}
@@ -32,11 +35,16 @@ jobs:
       - name: The Sniper Loop
         run: |
           export PATH=/home/runner/bin:$PATH
+          export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
           
-          # إرسال تنبيه ببدء المحاولة
-          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
-          -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -d text="[#MalaZ] Sniper started. Monitoring capacity..."
+          # وظيفة إرسال الرسائل
+          send_tg() {
+            curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="$1"
+          }
+
+          send_tg "[#MalaZ] Sniper started. Monitoring capacity..."
 
           AD=$(oci iam availability-domain list --compartment-id "${{ secrets.OCI_TENANCY_ID }}" --query 'data[0].name' --raw-output)
           IMAGE_ID=$(oci compute image list --all --operating-system "Canonical Ubuntu" --operating-system-version "22.04" --shape "VM.Standard.A1.Flex" --compartment-id "${{ secrets.OCI_TENANCY_ID }}" --query 'data[0].id' --raw-output)
@@ -54,15 +62,16 @@ jobs:
               --boot-volume-size-in-gbs 100 \
               --display-name "Minecraft-Server" > response.json 2>&1 || true
 
+            # التحقق من النتيجة وإرسال التنبيه
             if grep -q "PROVISIONING" response.json || grep -q "RUNNING" response.json; then
-              curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
-              -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-              -d text="[#MalaZ] SUCCESS! Server provisioned successfully. Check your Oracle console."
+              send_tg "[#MalaZ] SUCCESS! Server provisioned successfully. Check your Oracle console!"
               break
             elif grep -q "Out of host capacity" response.json; then
-              echo "[-] Capacity full."
+              send_tg "[#MalaZ] Attempt failed: Out of capacity."
             else
-              echo "[!] Encountered an issue. Retrying..."
+              # إرسال ملخص قصير للخطأ لتجنب كسر رسالة التيليجرام
+              ERR_MSG=$(grep -o '"message": "[^"]*"' response.json | head -1 || echo "Unknown error")
+              send_tg "[#MalaZ] Error occurred: $ERR_MSG. See GitHub logs for details."
             fi
             
             sleep 60
