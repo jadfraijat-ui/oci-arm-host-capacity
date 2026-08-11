@@ -2,34 +2,35 @@ name: Oracle ARM Hunter
 
 on:
   schedule:
-    # يتم تشغيل السكريبت كل 4 ساعات لتجنب حظر GitHub (6 مرات باليوم)
     - cron: '0 */4 * * *'
-  workflow_dispatch: # زر للتشغيل اليدوي في أي وقت
+  workflow_dispatch:
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-    
-    # حد أقصى للتشغيل 3 ساعات ونصف (210 دقيقة) حتى لا ينغلق بسبب قوانين GitHub
     timeout-minutes: 210 
 
     steps:
-      - name: Checkout Code
+      # هذا التعديل الجديد: يسحب كود الأداة من مستودع المبرمج مباشرة
+      - name: Checkout Matthew's Code
         uses: actions/checkout@v3
+        with:
+          repository: 'matthewxmurphy/oci-arm-host-capacity'
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
 
+      # تحميل الحزم والمكاتب المطلوبة للسكريبت
+      - name: Install Composer Dependencies
+        run: composer install --no-dev --optimize-autoloader
+
       - name: Create .env and Key files
         run: |
-          # إنشاء ملف المفتاح الخاص وإعطائه الصلاحيات الصحيحة
           echo "${{ secrets.OCI_PRIVATE_KEY }}" > oci_api_key.pem
           chmod 600 oci_api_key.pem
           
-          # بناء ملف الإعدادات .env ليقرأه السكريبت الأساسي
-          # لاحظ أننا حذفنا سطر OCI_IMAGE_ID بالكامل
           cat <<EOF > .env
           OCI_REGION=${{ secrets.OCI_REGION }}
           OCI_USER_ID=${{ secrets.OCI_USER_ID }}
@@ -44,7 +45,6 @@ jobs:
           OCI_MAX_INSTANCES=1
           EOF
 
-      - name: Install Dependencies and Run Script
+      - name: Run Script
         run: |
-          # تشغيل السكريبت ليبدأ محاولات الصيد
           php index.php
