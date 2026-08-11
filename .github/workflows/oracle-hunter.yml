@@ -11,7 +11,6 @@ jobs:
     timeout-minutes: 210 
 
     steps:
-      # هذا التعديل الجديد: يسحب كود الأداة من مستودع المبرمج مباشرة
       - name: Checkout Matthew's Code
         uses: actions/checkout@v3
         with:
@@ -21,10 +20,6 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
-
-      # تحميل الحزم والمكاتب المطلوبة للسكريبت
-      - name: Install Composer Dependencies
-        run: composer install --no-dev --optimize-autoloader
 
       - name: Create .env and Key files
         run: |
