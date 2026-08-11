@@ -29,6 +29,7 @@ jobs:
           chmod 600 oci_api_key.pem
           
           # بناء ملف الإعدادات .env ليقرأه السكريبت الأساسي
+          # لاحظ أننا حذفنا سطر OCI_IMAGE_ID بالكامل
           cat <<EOF > .env
           OCI_REGION=${{ secrets.OCI_REGION }}
           OCI_USER_ID=${{ secrets.OCI_USER_ID }}
@@ -36,7 +37,6 @@ jobs:
           OCI_KEY_FINGERPRINT=${{ secrets.OCI_KEY_FINGERPRINT }}
           OCI_PRIVATE_KEY_FILENAME=oci_api_key.pem
           OCI_SUBNET_ID=${{ secrets.OCI_SUBNET_ID }}
-          OCI_IMAGE_ID=${{ secrets.OCI_IMAGE_ID }}
           OCI_OCPUS=2
           OCI_MEMORY_IN_GBS=12
           OCI_BOOT_VOLUME_SIZE_IN_GBS=100
