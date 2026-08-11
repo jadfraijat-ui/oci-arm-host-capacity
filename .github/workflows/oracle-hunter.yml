@@ -13,11 +13,10 @@ jobs:
     steps:
       - name: Setup Oracle CLI & Auth
         run: |
+          # تجهيز بيئة أوراكل والمفاتيح
           mkdir -p ~/.oci
           echo "${{ secrets.OCI_PRIVATE_KEY }}" > ~/.oci/key.pem
           chmod 600 ~/.oci/key.pem
-          
-          echo "OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True" >> $GITHUB_ENV
           
           cat <<EOF > ~/.oci/config
           [DEFAULT]
@@ -28,29 +27,31 @@ jobs:
           key_file=/home/runner/.oci/key.pem
           EOF
           
+          echo "Installing official OCI CLI..."
           bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)" -- --accept-all-defaults
           echo "/home/runner/bin" >> $GITHUB_PATH
 
       - name: The Sniper Loop
         run: |
           export PATH=/home/runner/bin:$PATH
-          export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
           
-          send_tg() {
-            curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d text="$1"
-          }
-
-          send_tg "[#MalaZ] Sniper started. Monitoring capacity..."
-
+          echo "1. Fetching Availability Domain..."
           AD=$(oci iam availability-domain list --compartment-id "${{ secrets.OCI_TENANCY_ID }}" --query 'data[0].name' --raw-output)
+          
+          echo "2. Fetching Ubuntu 22.04 ARM Image ID..."
           IMAGE_ID=$(oci compute image list --all --operating-system "Canonical Ubuntu" --operating-system-version "22.04" --shape "VM.Standard.A1.Flex" --compartment-id "${{ secrets.OCI_TENANCY_ID }}" --query 'data[0].id' --raw-output)
           
+          if [ -z "$IMAGE_ID" ] || [ "$IMAGE_ID" == "null" ]; then
+            echo "Error: Could not fetch Image ID. Check your Tenancy ID."
+            exit 1
+          fi
+
+          echo "3. Starting Sniper Loop (Trying every 60 seconds)..."
           while true; do
-            echo "[$(date)] Attempting to provision server..."
+            echo "[$(date)] Attempting to hijack a server..."
             
-            timeout 20 oci compute instance launch \
+            # أمر إنشاء السيرفر
+            oci compute instance launch \
               --availability-domain "$AD" \
               --compartment-id "${{ secrets.OCI_TENANCY_ID }}" \
               --shape "VM.Standard.A1.Flex" \
@@ -60,16 +61,18 @@ jobs:
               --boot-volume-size-in-gbs 100 \
               --display-name "Minecraft-Server" > response.json 2>&1 || true
 
-            if grep -q "PROVISIONING" response.json || grep -q "RUNNING" response.json; then
-              send_tg "[#MalaZ] SUCCESS! Server provisioned successfully. Check your Oracle console!"
-              break
-            elif grep -q "Out of host capacity" response.json; then
-              send_tg "[#MalaZ] Attempt failed: Out of capacity."
-            else
-              send_tg "[#MalaZ] Error occurred! Check GitHub Actions logs to see response.json."
-              echo "--- RAW RESPONSE START ---"
+            # قراءة النتيجة
+            if grep -q "Out of host capacity" response.json; then
+              echo "[-] Out of capacity. Waiting 60 seconds..."
+            elif grep -q "TooManyRequests" response.json; then
+              echo "[-] Too many requests (Rate limit). Waiting 120 seconds..."
+              sleep 60
+            elif grep -q "id" response.json && grep -q "PROVISIONING" response.json; then
+              echo "[+] SUCCESS! SERVER IS BEING PROVISIONED! GO CHECK ORACLE!"
               cat response.json
-              echo "--- RAW RESPONSE END ---"
+              break
+            else
+              echo "[!] Unhandled response. Continuing to loop just in case..."
             fi
             
             sleep 60
